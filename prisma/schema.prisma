@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SourceDocument {
+  id          String   @id @default(cuid())
+  provider    String
+  externalKey String   @unique
+  sourceUrl   String
+  title       String
+  body        String   @db.Text
+  contentHash String
+  sourceAt    DateTime?
+  ingestedAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  entries     KnowledgeEntry[]
+}
+
+model KnowledgeEntry {
+  id           String              @id @default(cuid())
+  sourceId     String
+  source       SourceDocument      @relation(fields: [sourceId], references: [id])
+  title        String
+  currentVersion Int               @default(1)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  revisions    KnowledgeRevision[]
+}
+
+model KnowledgeRevision {
+  id          String         @id @default(cuid())
+  entryId     String
+  entry       KnowledgeEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  version     Int
+  summary     String         @db.Text
+  category    String
+  releaseState String        @default("unknown")
+  audiences   String[]       @default(["engineering"])
+  status      String         @default("draft")
+  claims      Json
+  method      String         @default("rules")
+  approvedBy  String?
+  approvedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  @@unique([entryId, version])
+  @@index([status])
+}
